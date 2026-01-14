@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Xem Tuổi Toàn Diện</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 1400px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; color: #2c3e50; }
+        h3 { color: #34495e; margin-top: 30px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+
+        .tab-nav { overflow: hidden; border-bottom: 2px solid #ccc; margin-bottom: 20px; }
+        .tab-nav button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; font-size: 1.1em; font-weight: bold; color: #34495e; }
+        .tab-nav button:hover { background-color: #f1f1f1; }
+        .tab-nav button.active { background-color: #3498db; color: white; border-radius: 5px 5px 0 0; }
+        .tab-nav button.active.tab-red { background-color: #e74c3c; }
+        .tab-nav button.active.tab-purple { background-color: #9b59b6; }
+        
+        .tab-content { display: none; animation: fadeEffect 0.5s; }
+        @keyframes fadeEffect { from {opacity: 0;} to {opacity: 1;} }
+
+        .input-section { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-bottom: 30px; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        label { font-weight: bold; font-size: 1.1em; }
+        select, button { padding: 12px 18px; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; cursor: pointer; transition: background-color 0.2s ease; }
+        button.action-btn { background-color: #3498db; color: white; border: none; }
+        button.action-btn:hover { background-color: #2980b9; }
+        button.action-btn.bad { background-color: #c0392b; }
+        button.action-btn.bad:hover { background-color: #a93226; }
+        button.action-btn.all { background-color: #7f8c8d; }
+        button.action-btn.all:hover { background-color: #626f70; }
+        button.action-btn.export { background-color: #27ae60; }
+        button.action-btn.export:hover { background-color: #229954; }
+        button.action-btn.purple { background-color: #9b59b6; }
+        button.action-btn.purple:hover { background-color: #8e44ad; }
+        button.export-btn { margin-top: 15px; display: none; }
+        button#exportGoodButton { background-color: #27ae60; color: white; border: none; }
+        button#exportGoodButton:hover { background-color: #229954; }
+        button#exportBadButton { background-color: #e74c3c; color: white; border: none; }
+        button#exportBadButton:hover { background-color: #c0392b; }
+
+        .results-header-container { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
+        th { background-color: #ecf0f1; font-weight: bold; }
+        .rank { font-weight: bold; text-align: center; }
+        .score { font-weight: bold; color: #e74c3c; text-align: center; }
+        .details ul { padding-left: 20px; margin: 0; font-size: 0.9em; }
+        .details li { margin-bottom: 4px; }
+        .penalty { color: #c0392b; font-style: italic; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+        #exportTextarea { width: 100%; height: 450px; margin-top: 15px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; border: 1px solid #ccc; padding: 10px; text-align: justify; }
+
+        /* Dashboard Styles - Tab 2 */
+        .dashboard-controls { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 20px; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+            background: #ecf0f1; 
+            border-radius: 10px; 
+            margin-bottom: 25px;
+            border: 2px solid #bdc3c7;
+        }
+        .control-group { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 8px; 
+        }
+        .control-group label { 
+            color: #2c3e50; 
+            font-size: 0.95em; 
+            font-weight: bold;
+        }
+        .control-group select { 
+            min-width: 180px; 
+            padding: 10px 15px; 
+            border: 2px solid #3498db; 
+            border-radius: 8px; 
+            font-size: 1em; 
+            background: white; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        }
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+        .dashboard-title { 
+            text-align: center; 
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text; 
+            font-size: 1.4em; 
+            margin-bottom: 25px; 
+            padding: 15px; 
+            border: 2px solid #3498db; 
+            border-radius: 10px; 
+        }
+        .chart-container { 
+            position: relative; 
+            margin: 20px auto; 
+            padding: 20px; 
+            background: #fff; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+        .chart-section-title { 
+            text-align: center; 
+            color: #2c3e50; 
+            font-size: 1.2em; 
+            margin-bottom: 15px; 
+            padding: 10px; 
+            background: #ecf0f1; 
+            border-radius: 8px; 
+        }
+        .year-chart-container { 
+            height: 400px; 
+        }
+        .month-chart-container { 
+            height: 350px; 
+        }
+        .day-chart-container { 
+            height: 300px; 
+        }
+        .legend-container { 
+            display: flex; 
+            justify-content: center; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+            margin: 15px 0; 
+            padding: 10px; 
+            background: #f8f9fa; 
+            border-radius: 8px; 
+        }
+        .legend-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 0.85em; 
+        }
+        .legend-color { 
+            width: 20px; 
+            height: 20px; 
+            border-radius: 4px; 
+        }
+        
+        .summary-cards { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 25px; 
+        }
+        .summary-card { 
+            padding: 25px; 
+            border-radius: 12px; 
+            text-align: center; 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        }
+        .summary-card.tuoi { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .summary-card.nam { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .summary-card h4 { margin: 0 0 10px 0; font-size: 1em; opacity: 0.9; }
+        .summary-card .value { font-size: 1.6em; font-weight: bold; margin-bottom: 8px; }
+        .summary-card .sub-info { font-size: 1em; opacity: 0.95; }
+        
+        .month-selector { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 15px; 
+            margin-bottom: 15px; 
+        }
+        .month-selector select { 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            border: 2px solid #3498db; 
+            font-size: 1em; 
+        }
+
+        /* Mini toggle buttons for detail lines */
+        .detail-toggle-container {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        .detail-mini-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid;
+            background: white;
+            cursor: pointer;
+            font-size: 0.6em;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+        }
+        .detail-mini-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        .detail-mini-btn.active {
+            opacity: 1;
+            color: white;
+        }
+        .detail-mini-btn.td {
+            border-color: #3498db;
+            color: #3498db;
+        }
+        .detail-mini-btn.td.active {
+            background: #3498db;
+            color: white;
+        }
+        .detail-mini-btn.tc {
+            border-color: #9b59b6;
+            color: #9b59b6;
+        }
+        .detail-mini-btn.tc.active {
+            background: #9b59b6;
+            color: white;
+        }
+        .detail-mini-btn.tm {
+            border-color: #f39c12;
+            color: #f39c12;
+        }
+        .detail-mini-btn.tm.active {
+            background: #f39c12;
+            color: white;
+        }
+        .detail-mini-btn.dc {
+            border-color: #1abc9c;
+            color: #1abc9c;
+        }
+        .detail-mini-btn.dc.active {
+            background: #1abc9c;
+            color: white;
+        }
+
+        /* Print Report Styles */
+        .print-report-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .print-report-content {
+            background-color: white;
+            margin: 20px auto;
+            padding: 0;
+            width: 297mm;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .print-controls {
+            position: fixed;
+            top: 10px;
+            right: 30px;
+            z-index: 2001;
+            display: flex;
+            gap: 10px;
+        }
+        .print-controls button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .print-controls .print-btn {
+            background: #27ae60;
+            color: white;
+        }
+        .print-controls .close-print-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* A4 Landscape Report Layout */
+        .report-page {
+            width: 297mm;
+            height: 210mm;
+            padding: 8mm 10mm;
+            background: white;
+            box-sizing: border-box;
+            page-break-after: always;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .report-page:last-child {
+            page-break-after: avoid;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #3498db;
+            flex-shrink: 0;
+        }
+        .report-header h1 {
+            font-size: 1.3em;
+            color: #2c3e50;
+            margin: 0 0 5px 0;
+        }
+        .report-header .subtitle {
+            font-size: 0.95em;
+            color: #7f8c8d;
+        }
+        
+        .report-charts-row {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+        }
+        .report-chart-half {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .report-chart-full {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 8px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .report-chart-title {
+            text-align: center;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            padding: 5px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            flex-shrink: 0;
+        }
+        .report-legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 0.7em;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+        .report-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .report-legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .report-chart-container {
+            flex: 1;
+            min-height: 0;
+        }
+        .report-chart-container-year {
+            flex: 1;
+            min-height: 0;
+        }
+        .report-chart-container-month {
+            flex: 1;
+            min-height: 0;
+        }
+        .report-chart-container-day {
+            flex: 1;
+            min-height: 0;
+        }
+        .report-footer {
+            text-align: center;
+            font-size: 0.75em;
+            color: #7f8c8d;
+            padding-top: 5px;
+            border-top: 1px solid #ddd;
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        /* Page 2+ styles */
+        .report-page-secondary {
+            width: 297mm;
+            height: 210mm;
+            padding: 8mm 10mm;
+            background: white;
+            box-sizing: border-box;
+            page-break-after: always;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .report-page-secondary:last-child {
+            page-break-after: avoid;
+        }
+        .report-page-header {
+            text-align: center;
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+        .report-day-charts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+        }
+        .report-day-chart-wrapper {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .report-day-chart-inner {
+            flex: 1;
+            min-height: 0;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-report-modal, .print-report-modal * {
+                visibility: visible;
+            }
+            .print-report-modal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background: white;
+                overflow: visible;
+            }
+            .print-report-content {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+            }
+            .print-controls {
+                display: none;
+            }
+            .report-page, .report-page-secondary {
+                page-break-after: always;
+                height: 210mm;
+            }
+            .report-page:last-child, .report-page-secondary:last-child {
+                page-break-after: avoid;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+        }
+
+        /* ==================== TAB 3: COMPARE STYLES ==================== */
+        .compare-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 2px solid #bdc3c7;
+        }
+        .compare-controls .control-group label {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .tuoi-select-group {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .tuoi-box {
+            background: rgba(255,255,255,0.9);
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .tuoi-box.tuoi-a {
+            border: 3px solid #3498db;
+        }
+        .tuoi-box.tuoi-b {
+            border: 3px solid #e67e22;
+        }
+        .tuoi-box label {
+            display: block;
+            color: #2c3e50;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        .tuoi-box select {
+            min-width: 220px;
+        }
+
+        .compare-title {
+            text-align: center;
+            font-size: 1.4em;
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .compare-summary-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .compare-summary-col {
+            flex: 1;
+        }
+        .compare-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .compare-card.tuoi-a-card {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+        .compare-card.tuoi-b-card {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        }
+        .compare-card.nam-card {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        .compare-card h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        .compare-card .value {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .compare-card .sub-info {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .compare-charts-section {
+            margin-bottom: 25px;
+        }
+        .compare-section-title {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .compare-chart-wrapper {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 15px;
+        }
+        .compare-year-chart-container {
+            height: 350px;
+        }
+        .compare-month-chart-container {
+            height: 320px;
+        }
+        .compare-day-chart-container {
+            height: 280px;
+        }
+        .compare-legend {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .compare-legend-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .compare-legend-title {
+            font-weight: bold;
+            padding: 5px 12px;
+            border-radius: 5px;
+            color: white;
+        }
+        .compare-legend-title.tuoi-a {
+            background: #3498db;
+        }
+        .compare-legend-title.tuoi-b {
+            background: #e67e22;
+        }
+        .compare-month-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .compare-month-selector select {
+            padding: 8px 15px;
+            border-radius: 6px;
+            border: 2px solid #3498db;
+            font-size: 1em;
+        }
+        .special-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+        .special-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .special-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Công cụ Xem Tuổi Toàn Diện</h1>
+
+        <div class="tab-nav">
+            <button class="tab-link" onclick="openTab(event, 'tabTuoiTotXau')">TUỔI TỐT/ XẤU TRONG NĂM</button>
+            <button class="tab-link tab-red" onclick="openTab(event, 'tabDinhLuong')">ĐỊNH LƯỢNG TƯƠNG TÁC TUỔI TRONG NĂM</button>
+            <button class="tab-link tab-purple" onclick="openTab(event, 'tabSoSanh')">SO SÁNH ĐỊNH LƯỢNG 2 TUỔI TRONG NĂM</button>
+        </div>
+
+        <!-- Tab 1: Tuổi Tốt/Xấu -->
+        <div id="tabTuoiTotXau" class="tab-content">
+            <div class="input-section">
+                <label for="yearSelect">Chọn năm cần xem:</label>
+                <select id="yearSelect"></select>
+                <div class="button-group">
+                    <button id="viewGoodButton" class="action-btn">Xem 10 Tuổi Tốt Nhất</button>
+                    <button id="viewBadButton" class="action-btn bad">Xem 10 Tuổi Xấu Nhất</button>
+                    <button id="viewAllButton" class="action-btn all">Xem Bảng 60 Hoa Giáp</button>
+                </div>
+            </div>
+            <div class="results-header-container">
+                <h2 id="resultsHeader"></h2>
+                <button id="exportGoodButton" class="export-btn">Xuất Danh Sách Tốt</button>
+                <button id="exportBadButton" class="export-btn bad">Xuất Danh Sách Xấu</button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hạng</th>
+                            <th>Tuổi</th>
+                            <th>Mệnh</th>
+                            <th>Điểm</th>
+                            <th>Chi Tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 2: Định Lượng Tương Tác -->
+        <div id="tabDinhLuong" class="tab-content">
+            <div class="dashboard-controls">
+                <div class="control-group">
+                    <label for="dlYearSelect">📅 Năm Xem</label>
+                    <select id="dlYearSelect"></select>
+                </div>
+                <div class="control-group">
+                    <label for="dlTuoiSelect">🎂 Tuổi Xem</label>
+                    <select id="dlTuoiSelect"></select>
+                </div>
+                <div class="control-group">
+                    <label for="dlGenderSelect">⚤ Giới Tính</label>
+                    <select id="dlGenderSelect">
+                        <option value="nam">Nam</option>
+                        <option value="nu">Nữ</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <div class="control-buttons">
+                        <button class="action-btn" onclick="generateDashboard()">🔍 Xem Kết Quả</button>
+                        <button class="action-btn export" onclick="openPrintReport()">📄 Xuất Kết Quả</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboardTitle" class="dashboard-title" style="display: none;"></div>
+            <div id="summaryCards" class="summary-cards" style="display: none;"></div>
+
+            <div id="yearChartSection" class="chart-container" style="display: none;">
+                <div class="chart-section-title">📊 TƯƠNG TÁC TRONG 7 NĂM (3 năm trước - Hiện tại - 3 năm sau)</div>
+                <div class="legend-container">
+                    <div class="legend-item"><span class="legend-color" style="background: #e74c3c;"></span> Tam Tai</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #1e8449;"></span> Thái Tuế</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #9b59b6;"></span> Xung Thái Tuế</div>
+                </div>
+                <div class="detail-toggle-container">
+                    <button class="detail-mini-btn td active" onclick="toggleDetailLine('year', 'td')" title="Tổng Điểm">TĐ</button>
+                    <button class="detail-mini-btn tc" onclick="toggleDetailLine('year', 'tc')" title="Thiên Can">TC</button>
+                    <button class="detail-mini-btn tm" onclick="toggleDetailLine('year', 'tm')" title="Thân Mạng">TM</button>
+                    <button class="detail-mini-btn dc" onclick="toggleDetailLine('year', 'dc')" title="Địa Chi">ĐC</button>
+                </div>
+                <div class="year-chart-container">
+                    <canvas id="yearChart"></canvas>
+                </div>
+            </div>
+
+            <div id="monthChartSection" class="chart-container" style="display: none;">
+                <div class="chart-section-title">📈 TƯƠNG TÁC 12 THÁNG ÂM LỊCH TRONG NĂM</div>
+                <div class="detail-toggle-container">
+                    <button class="detail-mini-btn td active" onclick="toggleDetailLine('month', 'td')" title="Tổng Điểm">TĐ</button>
+                    <button class="detail-mini-btn tc" onclick="toggleDetailLine('month', 'tc')" title="Thiên Can">TC</button>
+                    <button class="detail-mini-btn tm" onclick="toggleDetailLine('month', 'tm')" title="Thân Mạng">TM</button>
+                    <button class="detail-mini-btn dc" onclick="toggleDetailLine('month', 'dc')" title="Địa Chi">ĐC</button>
+                </div>
+                <div class="month-chart-container">
+                    <canvas id="monthChart"></canvas>
+                </div>
+            </div>
+
+            <div id="dayChartSection" class="chart-container" style="display: none;">
+                <div class="chart-section-title">📅 TƯƠNG TÁC CÁC NGÀY TRONG THÁNG ÂM LỊCH</div>
+                <div class="month-selector">
+                    <label for="dayMonthSelect"><strong>Chọn tháng âm lịch:</strong></label>
+                    <select id="dayMonthSelect" onchange="updateDayChart()"></select>
+                </div>
+                <div class="day-chart-container">
+                    <canvas id="dayChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: So Sánh Định Lượng 2 Tuổi -->
+        <div id="tabSoSanh" class="tab-content">
+            <div class="compare-controls">
+                <div class="control-group">
+                    <label for="cpYearSelect">📅 Năm Xem</label>
+                    <select id="cpYearSelect"></select>
+                </div>
+                <div class="tuoi-select-group">
+                    <div class="tuoi-box tuoi-a">
+                        <label>🔵 TUỔI A</label>
+                        <select id="cpTuoiASelect"></select>
+                    </div>
+                    <div class="tuoi-box tuoi-b">
+                        <label>🟠 TUỔI B</label>
+                        <select id="cpTuoiBSelect"></select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-buttons">
+                        <button class="action-btn" onclick="generateCompare()">🔍 So Sánh Tương Tác</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="compareTitle" class="compare-title" style="display: none;"></div>
+
+            <div id="compareSummary" class="compare-summary-row" style="display: none;">
+                <div class="compare-summary-col">
+                    <div class="compare-card tuoi-a-card" id="cpCardA"></div>
+                </div>
+                <div class="compare-summary-col">
+                    <div class="compare-card nam-card" id="cpCardNam"></div>
+                </div>
+                <div class="compare-summary-col">
+                    <div class="compare-card tuoi-b-card" id="cpCardB"></div>
+                </div>
+            </div>
+
+            <div id="cpYearChartSection" class="compare-charts-section" style="display: none;">
+                <div class="compare-section-title">📊 TƯƠNG TÁC TRONG 7 NĂM (3 năm trước - Hiện tại - 3 năm sau)</div>
+                <div class="compare-legend">
+                    <div class="compare-legend-group">
+                        <span class="compare-legend-title tuoi-a" id="cpLegendA">🔵 1993</span>
+                        <span style="color:#3498db;">━━━</span>
+                    </div>
+                    <div class="compare-legend-group">
+                        <span class="compare-legend-title tuoi-b" id="cpLegendB">🟠 1997</span>
+                        <span style="color:#e67e22;">━━━</span>
+                    </div>
+                </div>
+                <div class="special-legend">
+                    <div class="special-legend-item"><span class="special-dot" style="background:#e74c3c;"></span> Tam Tai</div>
+                    <div class="special-legend-item"><span class="special-dot" style="background:#1e8449;"></span> Thái Tuế</div>
+                    <div class="special-legend-item"><span class="special-dot" style="background:#9b59b6;"></span> Xung Thái Tuế</div>
+                </div>
+                <div class="compare-chart-wrapper">
+                    <div class="compare-year-chart-container"><canvas id="cpYearChart"></canvas></div>
+                </div>
+            </div>
+
+            <div id="cpMonthChartSection" class="compare-charts-section" style="display: none;">
+                <div class="compare-section-title">📈 TƯƠNG TÁC 12 THÁNG ÂM LỊCH TRONG NĂM</div>
+                <div class="compare-legend">
+                    <div class="compare-legend-group">
+                        <span class="compare-legend-title tuoi-a" id="cpLegendAMonth">🔵 1993</span>
+                        <span style="color:#3498db;">━━━</span>
+                    </div>
+                    <div class="compare-legend-group">
+                        <span class="compare-legend-title tuoi-b" id="cpLegendBMonth">🟠 1997</span>
+                        <span style="color:#e67e22;">━━━</span>
+                    </div>
+                </div>
+                <div class="compare-chart-wrapper">
+                    <div class="compare-month-chart-container"><canvas id="cpMonthChart"></canvas></div>
+                </div>
+            </div>
+
+            <div id="cpDayChartSection" class="compare-charts-section" style="display: none;">
+                <div class="compare-section-title">📅 TƯƠNG TÁC CÁC NGÀY TRONG THÁNG ÂM LỊCH</div>
+                <div class="compare-legend">
+                    <div class="compare-legend-group">
+                        <span class="compare-legend-title tuoi-a" id="cpLegendADay">🔵 1993</span>
+                        <span style="color:#3498db;">━━━</span>
+                    </div>
+                    <div class="compare-legend-group">
+                        <span class="compare-legend-title tuoi-b" id="cpLegendBDay">🟠 1997</span>
+                        <span style="color:#e67e22;">━━━</span>
+                    </div>
+                </div>
+                <div class="compare-month-selector">
+                    <label for="cpDayMonthSelect"><strong>Chọn tháng âm lịch:</strong></label>
+                    <select id="cpDayMonthSelect" onchange="updateCompareDayChart()"></select>
+                </div>
+                <div class="compare-chart-wrapper">
+                    <div class="compare-day-chart-container"><canvas id="cpDayChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Modal Tab 1 -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="modalHeader"></h2>
+            <textarea id="exportTextarea" readonly></textarea>
+        </div>
+    </div>
+
+    <!-- Print Report Modal -->
+    <div id="printReportModal" class="print-report-modal">
+        <div class="print-controls">
+            <button class="print-btn" onclick="printReport()">🖨️ In / Lưu PDF</button>
+            <button class="close-print-btn" onclick="closePrintReport()">✕ Đóng</button>
+        </div>
+        <div class="print-report-content" id="printReportContent">
+        </div>
+    </div>
+
+    <script>
+        // ==================== LUNAR CALENDAR FUNCTIONS ====================
+        const PI = Math.PI;
+        const CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
+        const CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
+        const THANG_DIA_CHI = ["Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi", "Tý", "Sửu"];
+
+        function INT(d) { return Math.floor(d); }
+
+        function jdFromDate(dd, mm, yy) {
+            var a, y, m, jd;
+            a = INT((14 - mm) / 12);
+            y = yy + 4800 - a;
+            m = mm + 12*a - 3;
+            jd = dd + INT((153*m+2)/5) + 365*y + INT(y/4) - INT(y/100) + INT(y/400) - 32045;
+            if (jd < 2299161) {
+                jd = dd + INT((153*m+2)/5) + 365*y + INT(y/4) - 32083;
+            }
+            return jd;
+        }
+
+        function jdToDate(jd) {
+            var a, b, c, d, e, m, day, month, year;
+            if (jd > 2299160) {
+                a = jd + 32044;
+                b = INT((4*a+3)/146097);
+                c = a - INT((b*146097)/4);
+            } else {
+                b = 0;
+                c = jd + 32082;
+            }
+            d = INT((4*c+3)/1461);
+            e = c - INT((1461*d)/4);
+            m = INT((5*e+2)/153);
+            day = e - INT((153*m+2)/5) + 1;
+            month = m + 3 - 12*INT(m/10);
+            year = b*100 + d - 4800 + INT(m/10);
+            return [day, month, year];
+        }
+
+        function getNewMoonDay(k, timeZone) {
+            var T, T2, T3, dr, Jd1, M, Mpr, F, C1, deltat, JdNew;
+            T = k/1236.85;
+            T2 = T * T;
+            T3 = T2 * T;
+            dr = PI/180;
+            Jd1 = 2415020.75933 + 29.53058868*k + 0.0001178*T2 - 0.000000155*T3;
+            Jd1 = Jd1 + 0.00033*Math.sin((166.56 + 132.87*T - 0.009173*T2)*dr);
+            M = 359.2242 + 29.10535608*k - 0.0000333*T2 - 0.00000347*T3;
+            Mpr = 306.0253 + 385.81691806*k + 0.0107306*T2 + 0.00001236*T3;
+            F = 21.2964 + 390.67050646*k - 0.0016528*T2 - 0.00000239*T3;
+            C1=(0.1734 - 0.000393*T)*Math.sin(M*dr) + 0.0021*Math.sin(2*dr*M);
+            C1 = C1 - 0.4068*Math.sin(Mpr*dr) + 0.0161*Math.sin(dr*2*Mpr);
+            C1 = C1 - 0.0004*Math.sin(dr*3*Mpr);
+            C1 = C1 + 0.0104*Math.sin(dr*2*F) - 0.0051*Math.sin(dr*(M+Mpr));
+            C1 = C1 - 0.0074*Math.sin(dr*(M-Mpr)) + 0.0004*Math.sin(dr*(2*F+M));
+            C1 = C1 - 0.0004*Math.sin(dr*(2*F-M)) - 0.0006*Math.sin(dr*(2*F+Mpr));
+            C1 = C1 + 0.0010*Math.sin(dr*(2*F-Mpr)) + 0.0005*Math.sin(dr*(2*Mpr+M));
+            if (T < -11) {
+                deltat = 0.001 + 0.000839*T + 0.0002261*T2 - 0.00000845*T3 - 0.000000081*T*T3;
+            } else {
+                deltat = -0.000278 + 0.000265*T + 0.000262*T2;
+            }
+            JdNew = Jd1 + C1 - deltat;
+            return INT(JdNew + 0.5 + timeZone/24);
+        }
+
+        function getSunLongitude(jdn, timeZone) {
+            var T, T2, dr, M, L0, DL, L;
+            T = (jdn - 2451545.5 - timeZone/24) / 36525;
+            T2 = T*T;
+            dr = PI/180;
+            M = 357.52910 + 35999.05030*T - 0.0001559*T2 - 0.00000048*T*T2;
+            L0 = 280.46645 + 36000.76983*T + 0.0003032*T2;
+            DL = (1.914600 - 0.004817*T - 0.000014*T2)*Math.sin(dr*M);
+            DL = DL + (0.019993 - 0.000101*T)*Math.sin(dr*2*M) + 0.000290*Math.sin(dr*3*M);
+            L = L0 + DL;
+            L = L*dr;
+            L = L - PI*2*(INT(L/(PI*2)));
+            return INT(L / PI * 6);
+        }
+
+        function getLunarMonth11(yy, timeZone) {
+            var k, off, nm, sunLong;
+            off = jdFromDate(31, 12, yy) - 2415021;
+            k = INT(off / 29.530588853);
+            nm = getNewMoonDay(k, timeZone);
+            sunLong = getSunLongitude(nm, timeZone);
+            if (sunLong >= 9) {
+                nm = getNewMoonDay(k-1, timeZone);
+            }
+            return nm;
+        }
+
+        function getLeapMonthOffset(a11, timeZone) {
+            var k, last, arc, i;
+            k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5);
+            last = 0;
+            i = 1;
+            arc = getSunLongitude(getNewMoonDay(k+i, timeZone), timeZone);
+            do {
+                last = arc;
+                i++;
+                arc = getSunLongitude(getNewMoonDay(k+i, timeZone), timeZone);
+            } while (arc != last && i < 14);
+            return i-1;
+        }
+
+        function convertSolar2Lunar(dd, mm, yy, timeZone) {
+            var k, dayNumber, monthStart, a11, b11, lunarDay, lunarMonth, lunarYear, lunarLeap, diff, leapMonthDiff;
+            dayNumber = jdFromDate(dd, mm, yy);
+            k = INT((dayNumber - 2415021.076998695) / 29.530588853);
+            monthStart = getNewMoonDay(k+1, timeZone);
+            if (monthStart > dayNumber) {
+                monthStart = getNewMoonDay(k, timeZone);
+            }
+            a11 = getLunarMonth11(yy, timeZone);
+            b11 = a11;
+            if (a11 >= monthStart) {
+                lunarYear = yy;
+                a11 = getLunarMonth11(yy-1, timeZone);
+            } else {
+                lunarYear = yy+1;
+                b11 = getLunarMonth11(yy+1, timeZone);
+            }
+            lunarDay = dayNumber-monthStart+1;
+            diff = INT((monthStart - a11)/29);
+            lunarLeap = 0;
+            lunarMonth = diff+11;
+            if (b11 - a11 > 365) {
+                leapMonthDiff = getLeapMonthOffset(a11, timeZone);
+                if (diff >= leapMonthDiff) {
+                    lunarMonth = diff + 10;
+                    if (diff == leapMonthDiff) {
+                        lunarLeap = 1;
+                    }
+                }
+            }
+            if (lunarMonth > 12) {
+                lunarMonth = lunarMonth - 12;
+            }
+            if (lunarMonth >= 11 && diff < 4) {
+                lunarYear -= 1;
+            }
+            return [lunarDay, lunarMonth, lunarYear, lunarLeap];
+        }
+
+        function convertLunar2Solar(lunarDay, lunarMonth, lunarYear, lunarLeap, timeZone) {
+            var k, a11, b11, off, leapOff, leapMonth, monthStart;
+            if (lunarMonth < 11) {
+                a11 = getLunarMonth11(lunarYear-1, timeZone);
+                b11 = getLunarMonth11(lunarYear, timeZone);
+            } else {
+                a11 = getLunarMonth11(lunarYear, timeZone);
+                b11 = getLunarMonth11(lunarYear+1, timeZone);
+            }
+            k = INT(0.5 + (a11 - 2415021.076998695) / 29.530588853);
+            off = lunarMonth - 11;
+            if (off < 0) {
+                off += 12;
+            }
+            if (b11 - a11 > 365) {
+                leapOff = getLeapMonthOffset(a11, timeZone);
+                leapMonth = leapOff - 2;
+                if (leapMonth < 0) {
+                    leapMonth += 12;
+                }
+                if (lunarLeap != 0 && lunarMonth != leapMonth) {
+                    return [0, 0, 0];
+                } else if (lunarLeap != 0 || off >= leapOff) {
+                    off += 1;
+                }
+            }
+            monthStart = getNewMoonDay(k+off, timeZone);
+            return jdToDate(monthStart + lunarDay - 1);
+        }
+
+        function getLunarMonthDays(lunarMonth, lunarYear, timeZone) {
+            var a11, b11, k, off, leapOff, leapMonth, monthStart, nextMonthStart;
+            if (lunarMonth < 11) {
+                a11 = getLunarMonth11(lunarYear-1, timeZone);
+                b11 = getLunarMonth11(lunarYear, timeZone);
+            } else {
+                a11 = getLunarMonth11(lunarYear, timeZone);
+                b11 = getLunarMonth11(lunarYear+1, timeZone);
+            }
+            k = INT(0.5 + (a11 - 2415021.076998695) / 29.530588853);
+            off = lunarMonth - 11;
+            if (off < 0) {
+                off += 12;
+            }
+            if (b11 - a11 > 365) {
+                leapOff = getLeapMonthOffset(a11, timeZone);
+                leapMonth = leapOff - 2;
+                if (leapMonth < 0) {
+                    leapMonth += 12;
+                }
+                if (off >= leapOff) {
+                    off += 1;
+                }
+            }
+            monthStart = getNewMoonDay(k + off, timeZone);
+            nextMonthStart = getNewMoonDay(k + off + 1, timeZone);
+            return nextMonthStart - monthStart;
+        }
+
+        function getCanChiNgay(dd, mm, yy) {
+            var jd = jdFromDate(dd, mm, yy);
+            var canIndex = (jd + 9) % 10;
+            var chiIndex = (jd + 1) % 12;
+            return { can: CAN[canIndex], chi: CHI[chiIndex], name: CAN[canIndex] + " " + CHI[chiIndex] };
+        }
+
+        function getCanChiThangAmLich(thangAmLich, namAmLich) {
+            var canNamIndex = (namAmLich + 6) % 10;
+            var canThangGiengIndex;
+            switch(canNamIndex) {
+                case 0: case 5: canThangGiengIndex = 2; break;
+                case 1: case 6: canThangGiengIndex = 4; break;
+                case 2: case 7: canThangGiengIndex = 6; break;
+                case 3: case 8: canThangGiengIndex = 8; break;
+                case 4: case 9: canThangGiengIndex = 0; break;
+            }
+            var canThangIndex = (canThangGiengIndex + thangAmLich - 1) % 10;
+            var chiThang = THANG_DIA_CHI[thangAmLich - 1];
+            return { can: CAN[canThangIndex], chi: chiThang, name: CAN[canThangIndex] + " " + chiThang };
+        }
+
+        function getMenhFromCanChi(canChi) {
+            const found = hoaGiap.find(h => h.can === canChi.can && h.chi === canChi.chi);
+            return found ? found.menh : null;
+        }
+
+        // ==================== ORIGINAL DATA SETS ====================
+        const hoaGiap = [
+            { can: "Giáp", chi: "Tý", menh: "Hải Trung Kim" }, { can: "Ất", chi: "Sửu", menh: "Hải Trung Kim" }, { can: "Bính", chi: "Dần", menh: "Giáng Hạ Thủy" }, { can: "Đinh", chi: "Mão", menh: "Giáng Hạ Thủy" }, { can: "Mậu", chi: "Thìn", menh: "Đại Lâm Mộc" }, { can: "Kỷ", chi: "Tỵ", menh: "Đại Lâm Mộc" }, { can: "Canh", chi: "Ngọ", menh: "Lộ Bàng Thổ" }, { can: "Tân", chi: "Mùi", menh: "Lộ Bàng Thổ" }, { can: "Nhâm", chi: "Thân", menh: "Kiếm Phong Kim" }, { can: "Quý", chi: "Dậu", menh: "Kiếm Phong Kim" }, { can: "Giáp", chi: "Tuất", menh: "Tuyền Trung Thủy" }, { can: "Ất", chi: "Hợi", menh: "Tuyền Trung Thủy" }, { can: "Bính", chi: "Tý", menh: "Lư Trung Hỏa" }, { can: "Đinh", chi: "Sửu", menh: "Lư Trung Hỏa" }, { can: "Mậu", chi: "Dần", menh: "Thành Đầu Thổ" }, { can: "Kỷ", chi: "Mão", menh: "Thành Đầu Thổ" }, { can: "Canh", chi: "Thìn", menh: "Bạch Lạp Kim" }, { can: "Tân", chi: "Tỵ", menh: "Bạch Lạp Kim" }, { can: "Nhâm", chi: "Ngọ", menh: "Dương Liễu Mộc" }, { can: "Quý", chi: "Mùi", menh: "Dương Liễu Mộc" }, { can: "Giáp", chi: "Thân", menh: "Sơn Đầu Hỏa" }, { can: "Ất", chi: "Dậu", menh: "Sơn Đầu Hỏa" }, { can: "Bính", chi: "Tuất", menh: "Ốc Thượng Thổ" }, { can: "Đinh", chi: "Hợi", menh: "Ốc Thượng Thổ" }, { can: "Mậu", chi: "Tý", menh: "Trường Lưu Thủy" }, { can: "Kỷ", chi: "Sửu", menh: "Trường Lưu Thủy" }, { can: "Canh", chi: "Dần", menh: "Tùng Bách Mộc" }, { can: "Tân", chi: "Mão", menh: "Tùng Bách Mộc" }, { can: "Nhâm", chi: "Thìn", menh: "Tích Lịch Hỏa" }, { can: "Quý", chi: "Tỵ", menh: "Tích Lịch Hỏa" }, { can: "Giáp", chi: "Ngọ", menh: "Sa Trung Kim" }, { can: "Ất", chi: "Mùi", menh: "Sa Trung Kim" }, { can: "Bính", chi: "Thân", menh: "Thiên Hà Thủy" }, { can: "Đinh", chi: "Dậu", menh: "Thiên Hà Thủy" }, { can: "Mậu", chi: "Tuất", menh: "Bình Địa Mộc" }, { can: "Kỷ", chi: "Hợi", menh: "Bình Địa Mộc" }, { can: "Canh", chi: "Tý", menh: "Bích Thượng Thổ" }, { can: "Tân", chi: "Sửu", menh: "Bích Thượng Thổ" }, { can: "Nhâm", chi: "Dần", menh: "Kim Bạch Kim" }, { can: "Quý", chi: "Mão", menh: "Kim Bạch Kim" }, { can: "Giáp", chi: "Thìn", menh: "Đại Khê Thủy" }, { can: "Ất", chi: "Tỵ", menh: "Đại Khê Thủy" }, { can: "Bính", chi: "Ngọ", menh: "Sơn Hạ Hỏa" }, { can: "Đinh", chi: "Mùi", menh: "Sơn Hạ Hỏa" }, { can: "Mậu", chi: "Thân", menh: "Đại Dịch Thổ" }, { can: "Kỷ", chi: "Dậu", menh: "Đại Dịch Thổ" }, { can: "Canh", chi: "Tuất", menh: "Thoa Xuyến Kim" }, { can: "Tân", chi: "Hợi", menh: "Thoa Xuyến Kim" }, { can: "Nhâm", chi: "Tý", menh: "Tang Đố Mộc" }, { can: "Quý", chi: "Sửu", menh: "Tang Đố Mộc" }, { can: "Giáp", chi: "Dần", menh: "Phúc Đăng Hỏa" }, { can: "Ất", chi: "Mão", menh: "Phúc Đăng Hỏa" }, { can: "Bính", chi: "Thìn", menh: "Sa Trung Thổ" }, { can: "Đinh", chi: "Tỵ", menh: "Sa Trung Thổ" }, { can: "Mậu", chi: "Ngọ", menh: "Đại Hải Thủy" }, { can: "Kỷ", chi: "Mùi", menh: "Đại Hải Thủy" }, { can: "Canh", chi: "Thân", menh: "Thạch Lựu Mộc" }, { can: "Tân", chi: "Dậu", menh: "Thạch Lựu Mộc" }, { can: "Nhâm", chi: "Tuất", menh: "Thiên Thượng Hỏa" }, { can: "Quý", chi: "Hợi", menh: "Thiên Thượng Hỏa" }
+        ].map((item, index) => ({ ...item, name: `${item.can} ${item.chi}`, index: index }));
+        
+        const canAmDuong = { "Giáp": "Dương", "Bính": "Dương", "Mậu": "Dương", "Canh": "Dương", "Nhâm": "Dương", "Ất": "Âm", "Đinh": "Âm", "Kỷ": "Âm", "Tân": "Âm", "Quý": "Âm" };
+        const tienThienCanHanh = { "Giáp": "Mộc", "Ất": "Mộc", "Bính": "Hỏa", "Đinh": "Hỏa", "Mậu": "Thổ", "Kỷ": "Thổ", "Canh": "Kim", "Tân": "Kim", "Nhâm": "Thủy", "Quý": "Thủy" };
+        const hauThienHopPairs = { "Giáp": "Kỷ", "Kỷ": "Giáp", "Ất": "Canh", "Canh": "Ất", "Bính": "Tân", "Tân": "Bính", "Đinh": "Nhâm", "Nhâm": "Đinh", "Mậu": "Quý", "Quý": "Mậu" };
+        const hauThienCanHanh = { "Giáp": "Thủy", "Kỷ": "Thủy", "Ất": "Hỏa", "Canh": "Hỏa", "Bính": "Mộc", "Tân": "Mộc", "Đinh": "Kim", "Nhâm": "Kim", "Mậu": "Thổ", "Quý": "Thổ" };
+        
+        const menhToHanh = {
+            "Hải Trung Kim": "Kim", "Kiếm Phong Kim": "Kim", "Bạch Lạp Kim": "Kim", "Sa Trung Kim": "Kim", "Kim Bạc Kim": "Kim", "Thoa Xuyến Kim": "Kim", "Kim Bạch Kim": "Kim",
+            "Đại Lâm Mộc": "Mộc", "Dương Liễu Mộc": "Mộc", "Tùng Bách Mộc": "Mộc", "Bình Địa Mộc": "Mộc", "Tang Đố Mộc": "Mộc", "Thạch Lựu Mộc": "Mộc",
+            "Giáng Hạ Thủy": "Thủy", "Tuyền Trung Thủy": "Thủy", "Trường Lưu Thủy": "Thủy", "Thiên Hà Thủy": "Thủy", "Đại Khê Thủy": "Thủy", "Đại Hải Thủy": "Thủy",
+            "Lư Trung Hỏa": "Hỏa", "Sơn Đầu Hỏa": "Hỏa", "Tích Lịch Hỏa": "Hỏa", "Sơn Hạ Hỏa": "Hỏa", "Phúc Đăng Hỏa": "Hỏa", "Thiên Thượng Hỏa": "Hỏa",
+            "Lộ Bàng Thổ": "Thổ", "Thành Đầu Thổ": "Thổ", "Ốc Thượng Thổ": "Thổ", "Bích Thượng Thổ": "Thổ", "Đại Dịch Thổ": "Thổ", "Sa Trung Thổ": "Thổ"
+        };
+
+        const hanhToColors = {
+            "Hỏa": "Đỏ hoặc Vàng", "Thủy": "Xanh dương, Xanh lơ, hoặc Xanh da trời",
+            "Mộc": "Xanh Lá Cây hoặc Xanh nước biển", "Thổ": "Vàng, Hồng, hoặc Đỏ", "Kim": "Vàng hoặc Xanh nước biển"
+        };
+        
+        const diaChiInteractions = { 
+            "Tý": { nhiHop: "Sửu", tamHop: ["Thân", "Thìn"], xung: "Ngọ", hai: "Mùi", hinh: "Mão" }, 
+            "Sửu": { nhiHop: "Tý", tamHop: ["Tỵ", "Dậu"], xung: "Mùi", hai: "Ngọ", hinh: ["Tuất", "Mùi"] }, 
+            "Dần": { nhiHop: "Hợi", tamHop: ["Ngọ", "Tuất"], xung: "Thân", hai: "Tỵ", hinh: ["Tỵ", "Thân"] }, 
+            "Mão": { nhiHop: "Tuất", tamHop: ["Hợi", "Mùi"], xung: "Dậu", hai: "Thìn", hinh: "Tý" }, 
+            "Thìn": { nhiHop: "Dậu", tamHop: ["Tý", "Thân"], xung: "Tuất", hai: "Mão", hinh: "Thìn" }, 
+            "Tỵ": { nhiHop: "Thân", tamHop: ["Sửu", "Dậu"], xung: "Hợi", hai: "Dần", hinh: ["Dần", "Thân"] }, 
+            "Ngọ": { nhiHop: "Mùi", tamHop: ["Dần", "Tuất"], xung: "Tý", hai: "Sửu", hinh: "Ngọ" }, 
+            "Mùi": { nhiHop: "Ngọ", tamHop: ["Hợi", "Mão"], xung: "Sửu", hai: "Tý", hinh: ["Sửu", "Tuất"] }, 
+            "Thân": { nhiHop: "Tỵ", tamHop: ["Tý", "Thìn"], xung: "Dần", hai: "Hợi", hinh: ["Dần", "Tỵ"] }, 
+            "Dậu": { nhiHop: "Thìn", tamHop: ["Sửu", "Tỵ"], xung: "Mão", hai: "Tuất", hinh: "Dậu" }, 
+            "Tuất": { nhiHop: "Mão", tamHop: ["Dần", "Ngọ"], xung: "Thìn", hai: "Dậu", hinh: ["Sửu", "Mùi"] }, 
+            "Hợi": { nhiHop: "Dần", tamHop: ["Mão", "Mùi"], xung: "Tỵ", hai: "Thân", hinh: "Hợi" } 
+        };
+        
+        const nguHanhSinhKhac = { "Kim": { sinh: "Thủy", khac: "Mộc" }, "Thủy": { sinh: "Mộc", khac: "Hỏa" }, "Mộc": { sinh: "Hỏa", khac: "Thổ" }, "Hỏa": { sinh: "Thổ", khac: "Kim" }, "Thổ": { sinh: "Kim", khac: "Thủy" } };
+        
+        let fullResults = []; 
+
+        // ==================== HELPER FUNCTIONS ====================
+        function getHoaGiapByName(name) { return hoaGiap.find(item => item.name === name); }
+        
+        function getHoaGiapByYear(year) {
+            const referenceYear = 1984;
+            const index = ((year - referenceYear) % 60 + 60) % 60;
+            return hoaGiap[index];
+        }
+        
+        function normalizeChi(chi) { return chi === "Tị" ? "Tỵ" : chi; }
+        
+        function getInteractionText(hanh1, hanh2) { 
+            if (hanh1 === hanh2) return "Bình hòa"; 
+            if (nguHanhSinhKhac[hanh1]?.sinh === hanh2) return "Năm sinh Tuổi"; 
+            if (nguHanhSinhKhac[hanh2]?.sinh === hanh1) return "Tuổi sinh Năm"; 
+            if (nguHanhSinhKhac[hanh1]?.khac === hanh2) return "Năm khắc Tuổi"; 
+            if (nguHanhSinhKhac[hanh2]?.khac === hanh1) return "Tuổi khắc Năm"; 
+            return "Không tương tác"; 
+        }
+        
+        function isTamTai(ageChi, yearChi) { 
+            const nA = normalizeChi(ageChi), nY = normalizeChi(yearChi);
+            const map = { "Thân": ["Dần", "Mão", "Thìn"], "Tý": ["Dần", "Mão", "Thìn"], "Thìn": ["Dần", "Mão", "Thìn"], 
+                "Tỵ": ["Hợi", "Tý", "Sửu"], "Dậu": ["Hợi", "Tý", "Sửu"], "Sửu": ["Hợi", "Tý", "Sửu"], 
+                "Dần": ["Thân", "Dậu", "Tuất"], "Ngọ": ["Thân", "Dậu", "Tuất"], "Tuất": ["Thân", "Dậu", "Tuất"], 
+                "Hợi": ["Tỵ", "Ngọ", "Mùi"], "Mão": ["Tỵ", "Ngọ", "Mùi"], "Mùi": ["Tỵ", "Ngọ", "Mùi"] }; 
+            return map[nA] ? map[nA].some(y => normalizeChi(y) === nY) : false;
+        }
+        
+        function isThaiTue(ageChi, yearChi) { return normalizeChi(ageChi) === normalizeChi(yearChi); }
+        
+        function isXungThaiTue(ageChi, yearChi) {
+            const nA = normalizeChi(ageChi), nY = normalizeChi(yearChi);
+            const int = diaChiInteractions[nY];
+            return int ? normalizeChi(int.xung) === nA : false;
+        }
+        
+        function getBirthYear(ageIndex) {
+            const currentYear = new Date().getFullYear();
+            let birthYear = 1984 + ageIndex;
+            while(birthYear + 60 <= currentYear) birthYear += 60;
+            while(birthYear > currentYear) birthYear -= 60;
+            return birthYear;
+        }
+
+        function getInteractionScoreWithAmDuong(hanh1, hanh2, sign1, sign2) {
+            const relation = getInteractionText(hanh1, hanh2);
+            const same = sign1 === sign2;
+            switch (relation) {
+                case "Năm sinh Tuổi": return { score: same ? 10 : 7, text: `Năm sinh Tuổi (${same ? 'cùng dấu' : 'khác dấu'})` };
+                case "Bình hòa": return { score: 5, text: "Bình hòa" };
+                case "Tuổi sinh Năm": return { score: 2, text: "Tuổi sinh Năm" };
+                case "Năm khắc Tuổi": return { score: same ? 0 : 1, text: `Năm khắc Tuổi (${same ? 'cùng dấu' : 'khác dấu'})` };
+                case "Tuổi khắc Năm": return { score: 0, text: "Tuổi khắc Năm" };
+                default: return { score: 0, text: "Không tương tác" };
+            }
+        }
+        
+        // ==================== COMPONENT SCORING FUNCTIONS (Normalized to 100%) ====================
+        function calculateThienCanScoreRaw(ageData, targetData) {
+            const aS = canAmDuong[ageData.can];
+            const tS = canAmDuong[targetData.can];
+            const ttScore = getInteractionScoreWithAmDuong(tienThienCanHanh[targetData.can], tienThienCanHanh[ageData.can], tS, aS).score * 3.0;
+            let htScore = 0;
+            if (hauThienHopPairs[targetData.can] === ageData.can) {
+                htScore = 20;
+            } else {
+                htScore = getInteractionScoreWithAmDuong(hauThienCanHanh[targetData.can], hauThienCanHanh[ageData.can], tS, aS).score * 2.0;
+            }
+            return ttScore + htScore;
+        }
+        
+        function calculateThienCanScore100(ageData, targetData) {
+            const raw = calculateThienCanScoreRaw(ageData, targetData);
+            return (raw / 50) * 100;
+        }
+        
+        function calculateThanMangScoreRaw(ageData, targetData) {
+            const tMenh = targetData.menh || getMenhFromCanChi(targetData);
+            if (!tMenh) return 0;
+            const tH = menhToHanh[tMenh];
+            const aH = menhToHanh[ageData.menh];
+            const tS = canAmDuong[targetData.can];
+            const aS = canAmDuong[ageData.can];
+            if (!tH || !aH) return 0;
+            return getInteractionScoreWithAmDuong(tH, aH, tS, aS).score * 3.0;
+        }
+        
+        function calculateThanMangScore100(ageData, targetData) {
+            const raw = calculateThanMangScoreRaw(ageData, targetData);
+            return (raw / 30) * 100;
+        }
+        
+        function calculateDiaChiScoreRaw(ageData, targetData) {
+            const nA = normalizeChi(ageData.chi);
+            const nT = normalizeChi(targetData.chi);
+            const int = diaChiInteractions[nT];
+            let score = 0;
+            if (int) {
+                if (int.tamHop.map(normalizeChi).includes(nA)) score = 20;
+                else if (normalizeChi(int.nhiHop) === nA) score = 16;
+                else if (normalizeChi(int.xung) === nA || nA === nT) score = 0;
+                else if (normalizeChi(int.hai) === nA) score = 2;
+                else score = 10;
+            }
+            return score;
+        }
+        
+        function calculateDiaChiScore100(ageData, targetData) {
+            const raw = calculateDiaChiScoreRaw(ageData, targetData);
+            return (raw / 20) * 100;
+        }
+
+        // ==================== SCORING FUNCTIONS ====================
+        function calculateYearScore(ageData, yearData) {
+            const yH = menhToHanh[yearData.menh], aH = menhToHanh[ageData.menh];
+            const yS = canAmDuong[yearData.can], aS = canAmDuong[ageData.can];
+            let total = 0, specials = [];
+            total += getInteractionScoreWithAmDuong(tienThienCanHanh[yearData.can], tienThienCanHanh[ageData.can], yS, aS).score * 3.0;
+            if (hauThienHopPairs[yearData.can] === ageData.can) { total += 20; }
+            else { total += getInteractionScoreWithAmDuong(hauThienCanHanh[yearData.can], hauThienCanHanh[ageData.can], yS, aS).score * 2.0; }
+            total += getInteractionScoreWithAmDuong(yH, aH, yS, aS).score * 3.0;
+            const nA = normalizeChi(ageData.chi), nY = normalizeChi(yearData.chi);
+            const int = diaChiInteractions[nY];
+            if (int) {
+                if (int.tamHop.map(normalizeChi).includes(nA)) total += 20;
+                else if (normalizeChi(int.nhiHop) === nA) total += 16;
+                else if (normalizeChi(int.xung) === nA || nA === nY) total += 0;
+                else if (normalizeChi(int.hai) === nA) total += 2;
+                else total += 10;
+            }
+            if (isTamTai(ageData.chi, yearData.chi)) { total *= 0.7; specials.push('tamtai'); }
+            if (isThaiTue(ageData.chi, yearData.chi)) { total *= 0.85; specials.push('thaituese'); }
+            else if (isXungThaiTue(ageData.chi, yearData.chi)) { total *= 0.85; specials.push('xungthaituese'); }
+            return { score: total, specials };
+        }
+
+        function calculateMonthScore(ageData, monthCanChi) {
+            const aS = canAmDuong[ageData.can], mS = canAmDuong[monthCanChi.can];
+            let total = 0;
+            total += getInteractionScoreWithAmDuong(tienThienCanHanh[monthCanChi.can], tienThienCanHanh[ageData.can], mS, aS).score * 3.0;
+            if (hauThienHopPairs[monthCanChi.can] === ageData.can) total += 20;
+            else total += getInteractionScoreWithAmDuong(hauThienCanHanh[monthCanChi.can], hauThienCanHanh[ageData.can], mS, aS).score * 2.0;
+            const monthMenh = getMenhFromCanChi(monthCanChi);
+            if (monthMenh) {
+                const mH = menhToHanh[monthMenh];
+                const aH = menhToHanh[ageData.menh];
+                if (mH && aH) {
+                    total += getInteractionScoreWithAmDuong(mH, aH, mS, aS).score * 3.0;
+                }
+            }
+            const nA = normalizeChi(ageData.chi), nM = normalizeChi(monthCanChi.chi);
+            const int = diaChiInteractions[nM];
+            if (int) {
+                if (int.tamHop.map(normalizeChi).includes(nA)) total += 20;
+                else if (normalizeChi(int.nhiHop) === nA) total += 16;
+                else if (normalizeChi(int.xung) === nA || nA === nM) total += 0;
+                else if (normalizeChi(int.hai) === nA) total += 2;
+                else total += 10;
+            }
+            return total;
+        }
+
+        function calculateDayScore(ageData, dayCanChi) {
+    const aS = canAmDuong[ageData.can], dS = canAmDuong[dayCanChi.can];
+    let total = 0;
+    
+    // Thiên Can - Tiên thiên
+    total += getInteractionScoreWithAmDuong(tienThienCanHanh[dayCanChi.can], tienThienCanHanh[ageData.can], dS, aS).score * 3.0;
+    
+    // Thiên Can - Hậu thiên
+    if (hauThienHopPairs[dayCanChi.can] === ageData.can) total += 20;
+    else total += getInteractionScoreWithAmDuong(hauThienCanHanh[dayCanChi.can], hauThienCanHanh[ageData.can], dS, aS).score * 2.0;
+    
+    // Thân Mạng (thêm mới)
+    const dayMenh = getMenhFromCanChi(dayCanChi);
+    if (dayMenh) {
+        const dH = menhToHanh[dayMenh];
+        const aH = menhToHanh[ageData.menh];
+        if (dH && aH) {
+            total += getInteractionScoreWithAmDuong(dH, aH, dS, aS).score * 3.0;
+        }
+    }
+    
+    // Địa Chi
+    const nA = normalizeChi(ageData.chi), nD = normalizeChi(dayCanChi.chi);
+    const int = diaChiInteractions[nD];
+    if (int) {
+        if (int.tamHop.map(normalizeChi).includes(nA)) total += 20;
+        else if (normalizeChi(int.nhiHop) === nA) total += 16;
+        else if (normalizeChi(int.xung) === nA || nA === nD) total += 0;
+        else if (normalizeChi(int.hai) === nA) total += 2;
+        else total += 10;
+    }
+    return total;
+}
+
+
+        // ==================== TAB 1 FUNCTIONS ====================
+        function runFullCalculation() {
+            if (fullResults.length > 0) return;
+            const yearData = getHoaGiapByName(document.getElementById('yearSelect').value);
+            if (!yearData) return;
+            const yH = menhToHanh[yearData.menh], yS = canAmDuong[yearData.can];
+            let allScores = [];
+            for (const ageData of hoaGiap) {
+                let breakdown = [], isPham = false;
+                const aS = canAmDuong[ageData.can];
+                const tt = getInteractionScoreWithAmDuong(tienThienCanHanh[yearData.can], tienThienCanHanh[ageData.can], yS, aS);
+                const tts = tt.score * 3.0;
+                breakdown.push(`Can Tiên thiên: ${tt.text} (+${tts.toFixed(1)}đ)`);
+                let hts = 0;
+                if (hauThienHopPairs[yearData.can] === ageData.can) { hts = 20; breakdown.push(`Can Hậu thiên: Hợp hóa (+20.0đ)`); }
+                else { const ht = getInteractionScoreWithAmDuong(hauThienCanHanh[yearData.can], hauThienCanHanh[ageData.can], yS, aS); hts = ht.score * 2.0; breakdown.push(`Can Hậu thiên: ${ht.text} (+${hts.toFixed(1)}đ)`); }
+                const m = getInteractionScoreWithAmDuong(yH, menhToHanh[ageData.menh], yS, aS);
+                const ms = m.score * 3.0;
+                breakdown.push(`Ngũ hành Mệnh: ${m.text} (+${ms.toFixed(1)}đ)`);
+                let cs = 0, cd = "";
+                const nA = normalizeChi(ageData.chi), nY = normalizeChi(yearData.chi);
+                const int = diaChiInteractions[nY];
+                if (int) {
+                    if (int.tamHop.map(normalizeChi).includes(nA)) { cs = 20; cd = "Tam hợp"; }
+                    else if (normalizeChi(int.nhiHop) === nA) { cs = 16; cd = "Nhị hợp"; }
+                    else if (normalizeChi(int.xung) === nA) { cs = 0; cd = "Tương Xung"; }
+                    else if (nA === nY) { cs = 0; cd = "Tương Hình"; }
+                    else if (normalizeChi(int.hai) === nA) { cs = 2; cd = "Tương Hại"; }
+                    else { cs = 10; cd = "Bình hòa"; }
+                }
+                breakdown.push(`Địa chi: ${cd} (+${cs.toFixed(1)}đ)`);
+                let total = tts + hts + ms + cs;
+                if (isTamTai(ageData.chi, yearData.chi)) { total *= 0.7; breakdown.push(`<span class="penalty">Phạm Tam Tai (-30%)</span>`); isPham = true; }
+                if (isThaiTue(ageData.chi, yearData.chi)) { total *= 0.85; breakdown.push(`<span class="penalty">Phạm Thái Tuế (-15%)</span>`); isPham = true; }
+                else if (isXungThaiTue(ageData.chi, yearData.chi)) { total *= 0.85; breakdown.push(`<span class="penalty">Phạm Xung Thái Tuế (-15%)</span>`); isPham = true; }
+                allScores.push({ ...ageData, totalScore: total, isPham, breakdown: `<ul><li>${breakdown.join('</li><li>')}</li></ul>` });
+            }
+            fullResults = allScores.sort((a, b) => b.totalScore - a.totalScore);
+        }
+        
+        function displayGoodList() { runFullCalculation(); const n = document.getElementById('yearSelect').value; document.getElementById('resultsHeader').innerText = `Top 10 Tuổi Tốt Nhất Năm ${n}`; document.getElementById('exportGoodButton').style.display = 'inline-block'; document.getElementById('exportBadButton').style.display = 'none'; renderTable(fullResults.filter(i => !i.isPham).slice(0, 10)); }
+        function displayBadList() { runFullCalculation(); const n = document.getElementById('yearSelect').value; document.getElementById('resultsHeader').innerText = `10 Tuổi Xấu Nhất Năm ${n}`; document.getElementById('exportGoodButton').style.display = 'none'; document.getElementById('exportBadButton').style.display = 'inline-block'; renderTable(fullResults.slice(-10).reverse()); }
+        function displayAllList() { runFullCalculation(); const n = document.getElementById('yearSelect').value; document.getElementById('resultsHeader').innerText = `Bảng Xếp Hạng 60 Hoa Giáp Năm ${n}`; document.getElementById('exportGoodButton').style.display = 'none'; document.getElementById('exportBadButton').style.display = 'none'; renderTable(fullResults); }
+        function renderTable(data) { const b = document.getElementById('resultsBody'); b.innerHTML = data.length === 0 ? `<tr><td colspan="5" style="text-align:center;">Không có kết quả.</td></tr>` : data.map((i, idx) => `<tr><td class="rank">${idx + 1}</td><td>${i.name}</td><td>${i.menh}</td><td class="score">${i.totalScore.toFixed(2)}</td><td class="details">${i.breakdown}</td></tr>`).join(''); }
+
+        function handleGoodExport() { 
+            const t10 = fullResults.filter(i => !i.isPham).slice(0, 10); 
+            if (t10.length === 0) return alert("Chưa có kết quả."); 
+            const n = document.getElementById('yearSelect').value, y = getHoaGiapByName(n), c = hanhToColors[menhToHanh[y.menh]] || "phù hợp"; 
+            let s = `TUỔI XÔNG ĐẤT VÀ MỞ HÀNG KHAI TRƯƠNG CHO NĂM ${n.toUpperCase()} VẬN KHÍ ${y.menh.toUpperCase()}\n\nDanh sách 10 tuổi tốt nhất:\n`; 
+            t10.forEach((i, idx) => { s += `${idx + 1}. ${i.name} (${getBirthYear(i.index)})\n`; }); 
+            s += `\nLưu ý:\n- Những tuổi như trên được mời Xông đất, mua mở hàng khai trương đầu năm, động thổ xây sửa nhà, dự lễ về nhà mới, đi đón cô dâu về nhà chồng, tiễn đưa người thân đi làm ăn xa, đón em bé từ bảo sanh viện về nhà, dự lễ cúng đầy tháng, dự lễ cúng thôi nôi cho em bé, dự lễ cúng đáo tuế, cúng thất tuần cho gia chủ sẽ được cát tường đại lợi;\n- Họ phải không trong thời gian thọ tang. Nam nữ đều tốt, không bị xui xẻo, nạn tai, là người tử tế đàng hoàng, nhân cách đầy đủ, trí tuệ thông minh, hiền hậu nhân từ, phúc lộc đầy đủ;\n- Người được mời xông đất, khai trương đầu năm kiêng mặc áo Trắng hoặc Đen;\n- Người xông đất mặc áo tông màu ${c} là thuận nhất với Năm ${n.toUpperCase()} vận khí ${y.menh.toUpperCase()}.`; 
+            document.getElementById('modalHeader').innerText = "Kết Quả Tuổi Tốt"; 
+            document.getElementById('exportTextarea').value = s; 
+            document.getElementById('exportModal').style.display = "block"; 
+        }
+        function handleBadExport() { const b10 = fullResults.slice(-10).reverse(); if (b10.length === 0) return alert("Chưa có kết quả."); const n = document.getElementById('yearSelect').value, y = getHoaGiapByName(n); let s = `DANH SÁCH 10 TUỔI XẤU NHẤT TRONG NĂM ${n.toUpperCase()} VẬN KHÍ ${y.menh.toUpperCase()}\n\n`; b10.forEach((i, idx) => { s += `${idx + 1}. ${i.name} (${getBirthYear(i.index)})\n`; }); document.getElementById('modalHeader').innerText = "Kết Quả Tuổi Xấu"; document.getElementById('exportTextarea').value = s; document.getElementById('exportModal').style.display = "block"; }
+
+        // ==================== TAB 2 DASHBOARD ====================
+        let yearChart = null, monthChart = null, dayChart = null, currentDashboardData = null;
+        let reportCharts = [];
+        
+        let detailLineVisibility = {
+            year: { td: true, tc: false, tm: false, dc: false },
+            month: { td: true, tc: false, tm: false, dc: false }
+        };
+
+        function toggleDetailLine(chartType, lineType) {
+            detailLineVisibility[chartType][lineType] = !detailLineVisibility[chartType][lineType];
+            const container = chartType === 'year' ? document.getElementById('yearChartSection') : document.getElementById('monthChartSection');
+            const btn = container.querySelector(`.detail-mini-btn.${lineType}`);
+            if (btn) {
+                btn.classList.toggle('active', detailLineVisibility[chartType][lineType]);
+            }
+            if (currentDashboardData) {
+                if (chartType === 'year') {
+                    generateYearChart(currentDashboardData.ageData, currentDashboardData.viewYear);
+                } else if (chartType === 'month') {
+                    generateMonthChart(currentDashboardData.ageData, currentDashboardData.lunarYear);
+                }
+            }
+        }
+
+        function generateDashboard() {
+            const viewYear = parseInt(document.getElementById('dlYearSelect').value);
+            const tuoiName = document.getElementById('dlTuoiSelect').value;
+            const ageData = getHoaGiapByName(tuoiName);
+            if (!ageData) return alert("Không tìm thấy thông tin tuổi!");
+            const birthYear = getBirthYear(ageData.index);
+            const viewYearData = getHoaGiapByYear(viewYear);
+            const lunarInfoMid = convertSolar2Lunar(15, 6, viewYear, 7);
+            const lunarYear = lunarInfoMid[2];
+            currentDashboardData = { ageData, viewYear, viewYearData, birthYear, lunarYear };
+            document.getElementById('dashboardTitle').innerHTML = `ĐỊNH LƯỢNG TƯƠNG TÁC TUỔI <strong>${tuoiName}</strong> (${birthYear}) - <strong>${ageData.menh}</strong><br>TRONG NĂM <strong>${viewYearData.name}</strong> (${viewYear}) VẬN KHÍ <strong>${viewYearData.menh}</strong>`;
+            document.getElementById('dashboardTitle').style.display = 'block';
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="summary-card tuoi"><h4>🎂 TUỔI XEM</h4><div class="value">${ageData.name}</div><div class="sub-info">Năm sinh: ${birthYear} - ${ageData.menh}</div></div>
+                <div class="summary-card nam"><h4>📅 NĂM XEM</h4><div class="value">${viewYearData.name}</div><div class="sub-info">Năm: ${viewYear} - ${viewYearData.menh}</div></div>`;
+            document.getElementById('summaryCards').style.display = 'grid';
+            
+            // Reset buttons
+            document.querySelectorAll('#yearChartSection .detail-mini-btn, #monthChartSection .detail-mini-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.classList.contains('td')) btn.classList.add('active');
+            });
+            detailLineVisibility = {
+                year: { td: true, tc: false, tm: false, dc: false },
+                month: { td: true, tc: false, tm: false, dc: false }
+            };
+            
+            generateYearChart(ageData, viewYear);
+            generateMonthChart(ageData, lunarYear);
+            setupDayMonthSelector(lunarYear);
+            updateDayChart();
+            ['yearChartSection', 'monthChartSection', 'dayChartSection'].forEach(id => document.getElementById(id).style.display = 'block');
+        }
+
+        function generateYearChart(ageData, centerYear) {
+            const years = [], scores = [], bgColors = [], bdColors = [], specials = [];
+            const tcScores = [], tmScores = [], dcScores = [];
+            for (let i = -3; i <= 3; i++) {
+                const y = centerYear + i, yd = getHoaGiapByYear(y), r = calculateYearScore(ageData, yd);
+                years.push(`${y}\n${yd.name}`); scores.push(r.score); specials.push(r.specials);
+                tcScores.push(calculateThienCanScore100(ageData, yd));
+                tmScores.push(calculateThanMangScore100(ageData, yd));
+                dcScores.push(calculateDiaChiScore100(ageData, yd));
+                let bg = 'rgba(52,152,219,0.7)', bd = 'rgba(52,152,219,1)';
+                if (r.specials.includes('tamtai')) { bg = 'rgba(231,76,60,0.7)'; bd = 'rgba(231,76,60,1)'; }
+                else if (r.specials.includes('thaituese')) { bg = 'rgba(30,132,73,0.7)'; bd = 'rgba(30,132,73,1)'; }
+                else if (r.specials.includes('xungthaituese')) { bg = 'rgba(155,89,182,0.7)'; bd = 'rgba(155,89,182,1)'; }
+                else if (i === 0) { bg = 'rgba(52,152,219,0.7)'; bd = 'rgba(41,128,185,1)'; }
+                bgColors.push(bg); bdColors.push(bd);
+            }
+            const borderWidths = [2,2,2,4,2,2,2];
+            const datasets = [];
+            
+            if (detailLineVisibility.year.td) {
+                datasets.push({
+                    type: 'bar', label: 'TĐ', data: scores, backgroundColor: bgColors, borderColor: bdColors, borderWidth: borderWidths, borderRadius: 8, order: 2
+                });
+            }
+            if (detailLineVisibility.year.tc) {
+                datasets.push({
+                    type: 'line', label: 'TC', data: tcScores, borderColor: '#9b59b6', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#9b59b6', order: 1
+                });
+            }
+            if (detailLineVisibility.year.tm) {
+                datasets.push({
+                    type: 'line', label: 'TM', data: tmScores, borderColor: '#f39c12', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#f39c12', order: 1
+                });
+            }
+            if (detailLineVisibility.year.dc) {
+                datasets.push({
+                    type: 'line', label: 'ĐC', data: dcScores, borderColor: '#1abc9c', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#1abc9c', order: 1
+                });
+            }
+            
+            if (yearChart) yearChart.destroy();
+            yearChart = new Chart(document.getElementById('yearChart').getContext('2d'), {
+                type: 'bar',
+                data: { labels: years, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: ctx => {
+                                    if (ctx.dataset.label === 'TĐ') {
+                                        const s = specials[ctx.dataIndex];
+                                        let n = [];
+                                        if (s.includes('tamtai')) n.push('⚠️ Tam Tai');
+                                        if (s.includes('thaituese')) n.push('⚠️ Thái Tuế');
+                                        if (s.includes('xungthaituese')) n.push('⚠️ Xung Thái Tuế');
+                                        return n.join('\n');
+                                    }
+                                    return '';
+                                }
+                            }
+                        },
+                        datalabels: {
+                            anchor: 'end', align: 'top',
+                            formatter: (v, ctx) => ctx.dataset.label === 'TĐ' ? v.toFixed(1) : '',
+                            font: { weight: 'bold', size: 12 }, color: '#2c3e50'
+                        }
+                    },
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function generateMonthChart(ageData, lunarYear) {
+            const months = [], scores = [], bgColors = [], tooltips = [];
+            const tcScores = [], tmScores = [], dcScores = [];
+            for (let m = 1; m <= 12; m++) {
+                const mc = getCanChiThangAmLich(m, lunarYear), s = calculateMonthScore(ageData, mc);
+                months.push(m.toString()); scores.push(s); tooltips.push(mc.name);
+                bgColors.push(`hsla(${Math.floor((s/100)*120)},70%,50%,0.7)`);
+                tcScores.push(calculateThienCanScore100(ageData, mc));
+                tmScores.push(calculateThanMangScore100(ageData, mc));
+                dcScores.push(calculateDiaChiScore100(ageData, mc));
+            }
+            const datasets = [];
+            
+            if (detailLineVisibility.month.td) {
+                datasets.push({
+                    label: 'TĐ', data: scores, fill: true, backgroundColor: 'rgba(52,152,219,0.2)', borderColor: 'rgba(52,152,219,1)',
+                    borderWidth: 3, tension: 0.4, pointBackgroundColor: bgColors, pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 8, order: 2
+                });
+            }
+            if (detailLineVisibility.month.tc) {
+                datasets.push({
+                    label: 'TC', data: tcScores, fill: false, borderColor: '#9b59b6', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#9b59b6', order: 1
+                });
+            }
+            if (detailLineVisibility.month.tm) {
+                datasets.push({
+                    label: 'TM', data: tmScores, fill: false, borderColor: '#f39c12', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#f39c12', order: 1
+                });
+            }
+            if (detailLineVisibility.month.dc) {
+                datasets.push({
+                    label: 'ĐC', data: dcScores, fill: false, borderColor: '#1abc9c', backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#1abc9c', order: 1
+                });
+            }
+            
+            if (monthChart) monthChart.destroy();
+            monthChart = new Chart(document.getElementById('monthChart').getContext('2d'), {
+                type: 'line',
+                data: { labels: months, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: ctx => `Tháng ${ctx[0].dataIndex + 1} - ${tooltips[ctx[0].dataIndex]}` } },
+                        datalabels: {
+                            anchor: 'end', align: 'top',
+                            formatter: (v, ctx) => ctx.dataset.label === 'TĐ' ? v.toFixed(1) : '',
+                            font: { weight: 'bold', size: 10 }, color: '#2c3e50'
+                        }
+                    },
+                    scales: { y: { beginAtZero: true, max: 100 }, x: { title: { display: true, text: 'Tháng Âm Lịch' } } }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function setupDayMonthSelector(lunarYear) {
+            const sel = document.getElementById('dayMonthSelect'); sel.innerHTML = '';
+            for (let m = 1; m <= 12; m++) { sel.innerHTML += `<option value="${m}">Tháng ${m} âm lịch</option>`; }
+            sel.value = convertSolar2Lunar(new Date().getDate(), new Date().getMonth() + 1, new Date().getFullYear(), 7)[1];
+        }
+
+        function updateDayChart() {
+            if (!currentDashboardData) return;
+            const { ageData, lunarYear } = currentDashboardData;
+            const lm = parseInt(document.getElementById('dayMonthSelect').value), dim = getLunarMonthDays(lm, lunarYear, 7);
+            const days = [], scores = [], bgColors = [], tooltips = [];
+            for (let d = 1; d <= dim; d++) {
+                const sd = convertLunar2Solar(d, lm, lunarYear, 0, 7); if (sd[0] === 0) continue;
+                const dc = getCanChiNgay(sd[0], sd[1], sd[2]), s = calculateDayScore(ageData, dc);
+                days.push(d.toString()); scores.push(s); tooltips.push({ cc: dc.name, sl: `${sd[0]}/${sd[1]}/${sd[2]}` });
+                bgColors.push(`hsla(${Math.floor((s/100)*120)},70%,50%,0.7)`);
+            }
+            if (dayChart) dayChart.destroy();
+            dayChart = new Chart(document.getElementById('dayChart').getContext('2d'), {
+                type: 'line', 
+                data: { labels: days, datasets: [{ data: scores, fill: true, backgroundColor: 'rgba(52,152,219,0.15)', borderColor: 'rgba(52,152,219,1)', borderWidth: 2, tension: 0.3, pointBackgroundColor: bgColors, pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 5, pointHoverRadius: 8 }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { title: ctx => `Ngày ${ctx[0].dataIndex + 1} - ${tooltips[ctx[0].dataIndex].cc}`, afterTitle: ctx => `(DL: ${tooltips[ctx[0].dataIndex].sl})` } }, datalabels: { display: false } }, 
+                    scales: { y: { beginAtZero: true, max: 100 }, x: { title: { display: true, text: 'Ngày Âm Lịch' }, ticks: { font: { size: 10 } } } } 
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        // ==================== PRINT REPORT ====================
+        function openPrintReport() {
+            if (!currentDashboardData) return alert("Vui lòng nhấn 'Xem Kết Quả' trước!");
+            const { ageData, viewYear, viewYearData, birthYear, lunarYear } = currentDashboardData;
+            reportCharts.forEach(c => { if (c) c.destroy(); });
+            reportCharts = [];
+            const showTD = detailLineVisibility.year.td;
+            const showTC = detailLineVisibility.year.tc;
+            const showTM = detailLineVisibility.year.tm;
+            const showDC = detailLineVisibility.year.dc;
+            const showMonthTD = detailLineVisibility.month.td;
+            const showMonthTC = detailLineVisibility.month.tc;
+            const showMonthTM = detailLineVisibility.month.tm;
+            const showMonthDC = detailLineVisibility.month.dc;
+            
+            let detailLegendHTML = '';
+            if (showTC || showTM || showDC) {
+                detailLegendHTML = '<div class="report-legend" style="margin-top:3px;">';
+                if (showTC) detailLegendHTML += '<div class="report-legend-item"><span class="report-legend-color" style="background:#9b59b6;"></span> TC</div>';
+                if (showTM) detailLegendHTML += '<div class="report-legend-item"><span class="report-legend-color" style="background:#f39c12;"></span> TM</div>';
+                if (showDC) detailLegendHTML += '<div class="report-legend-item"><span class="report-legend-color" style="background:#1abc9c;"></span> ĐC</div>';
+                detailLegendHTML += '</div>';
+            }
+            
+            let monthDetailLegendHTML = '';
+            if (showMonthTC || showMonthTM || showMonthDC) {
+                monthDetailLegendHTML = '<div class="report-legend" style="margin-top:3px;">';
+                if (showMonthTC) monthDetailLegendHTML += '<div class="report-legend-item"><span class="report-legend-color" style="background:#9b59b6;"></span> TC</div>';
+                if (showMonthTM) monthDetailLegendHTML += '<div class="report-legend-item"><span class="report-legend-color" style="background:#f39c12;"></span> TM</div>';
+                if (showMonthDC) monthDetailLegendHTML += '<div class="report-legend-item"><span class="report-legend-color" style="background:#1abc9c;"></span> ĐC</div>';
+                monthDetailLegendHTML += '</div>';
+            }
+            
+            let pagesHTML = `
+                <div class="report-page">
+                    <div class="report-header">
+                        <h1>ĐỊNH LƯỢNG TƯƠNG TÁC TUỔI TRONG NĂM</h1>
+                        <div class="subtitle">Tuổi ${ageData.name} (${birthYear}) - ${ageData.menh} | Năm ${viewYearData.name} (${viewYear}) - ${viewYearData.menh}</div>
+                    </div>
+                    <div class="report-charts-row" style="flex: 0 0 auto; height: 42%;">
+                        <div class="report-chart-half">
+                            <div class="report-chart-title">📊 TƯƠNG TÁC TRONG 7 NĂM</div>
+                            <div class="report-legend">
+                                <div class="report-legend-item"><span class="report-legend-color" style="background:#e74c3c;"></span> Tam Tai</div>
+                                <div class="report-legend-item"><span class="report-legend-color" style="background:#1e8449;"></span> Thái Tuế</div>
+                                <div class="report-legend-item"><span class="report-legend-color" style="background:#9b59b6;"></span> Xung Thái Tuế</div>
+                            </div>
+                            ${detailLegendHTML}
+                            <div class="report-chart-container-year"><canvas id="reportYearChart"></canvas></div>
+                        </div>
+                        <div class="report-chart-half">
+                            <div class="report-chart-title">📈 TƯƠNG TÁC 12 THÁNG ÂM LỊCH</div>
+                            ${monthDetailLegendHTML}
+                            <div class="report-chart-container-month"><canvas id="reportMonthChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="report-chart-full" style="flex: 1; margin-top: 10px;">
+                        <div class="report-chart-title">📅 TƯƠNG TÁC CÁC NGÀY TRONG THÁNG 1 ÂM LỊCH</div>
+                        <div class="report-chart-container-day"><canvas id="reportDayChart1"></canvas></div>
+                    </div>
+                    <div class="report-footer">DashBoard được tạo bởi Tien.TQN</div>
+                </div>
+            `;
+            
+            for (let pageNum = 2; pageNum <= 7; pageNum++) {
+                const month1 = (pageNum - 2) * 2 + 2;
+                const month2 = month1 + 1;
+                if (month1 > 12) break;
+                let monthChartsHTML = `<div class="report-day-chart-wrapper"><div class="report-chart-title" style="background: #ecf0f1;">📅 TƯƠNG TÁC CÁC NGÀY TRONG THÁNG ${month1} ÂM LỊCH</div><div class="report-day-chart-inner"><canvas id="reportDayChart${month1}"></canvas></div></div>`;
+                if (month2 <= 12) {
+                    monthChartsHTML += `<div class="report-day-chart-wrapper"><div class="report-chart-title" style="background: #ecf0f1;">📅 TƯƠNG TÁC CÁC NGÀY TRONG THÁNG ${month2} ÂM LỊCH</div><div class="report-day-chart-inner"><canvas id="reportDayChart${month2}"></canvas></div></div>`;
+                }
+                pagesHTML += `<div class="report-page-secondary"><div class="report-page-header">Tuổi ${ageData.name} (${birthYear}) - ${ageData.menh} | Năm ${viewYearData.name} (${viewYear}) - ${viewYearData.menh}</div><div class="report-day-charts-container">${monthChartsHTML}</div><div class="report-footer">DashBoard được tạo bởi Tien.TQN</div></div>`;
+            }
+            
+            document.getElementById('printReportContent').innerHTML = pagesHTML;
+            document.getElementById('printReportModal').style.display = 'block';
+            setTimeout(() => { generateAllReportCharts(ageData, viewYear, lunarYear, showTD, showTC, showTM, showDC, showMonthTD, showMonthTC, showMonthTM, showMonthDC); }, 100);
+        }
+
+        function generateAllReportCharts(ageData, centerYear, lunarYear, showTD, showTC, showTM, showDC, showMonthTD, showMonthTC, showMonthTM, showMonthDC) {
+            const years = [], yScores = [], yBg = [], yBd = [], yBorderWidths = [];
+            const tcScores = [], tmScores = [], dcScores = [];
+            for (let i = -3; i <= 3; i++) {
+                const y = centerYear + i, yd = getHoaGiapByYear(y), r = calculateYearScore(ageData, yd);
+                years.push(`${y}\n${yd.name}`); yScores.push(r.score);
+                tcScores.push(calculateThienCanScore100(ageData, yd));
+                tmScores.push(calculateThanMangScore100(ageData, yd));
+                dcScores.push(calculateDiaChiScore100(ageData, yd));
+                let bg = 'rgba(52,152,219,0.7)', bd = 'rgba(52,152,219,1)', bw = 1;
+                if (r.specials.includes('tamtai')) { bg = 'rgba(231,76,60,0.7)'; bd = 'rgba(231,76,60,1)'; }
+                else if (r.specials.includes('thaituese')) { bg = 'rgba(30,132,73,0.7)'; bd = 'rgba(30,132,73,1)'; }
+                else if (r.specials.includes('xungthaituese')) { bg = 'rgba(155,89,182,0.7)'; bd = 'rgba(155,89,182,1)'; }
+                else if (i === 0) { bw = 3; }
+                yBg.push(bg); yBd.push(bd); yBorderWidths.push(bw);
+            }
+            
+            const yearDatasets = [];
+            if (showTD) yearDatasets.push({ data: yScores, backgroundColor: yBg, borderColor: yBd, borderWidth: yBorderWidths, borderRadius: 4 });
+            if (showTC) yearDatasets.push({ type: 'line', label: 'TC', data: tcScores, borderColor: '#9b59b6', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#9b59b6' });
+            if (showTM) yearDatasets.push({ type: 'line', label: 'TM', data: tmScores, borderColor: '#f39c12', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#f39c12' });
+            if (showDC) yearDatasets.push({ type: 'line', label: 'ĐC', data: dcScores, borderColor: '#1abc9c', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#1abc9c' });
+            
+            const reportYearChart = new Chart(document.getElementById('reportYearChart').getContext('2d'), {
+                type: 'bar', data: { labels: years, datasets: yearDatasets },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: (v, ctx) => ctx.datasetIndex === 0 && showTD ? v.toFixed(0) : '', font: { weight: 'bold', size: 9 }, color: '#2c3e50' } }, scales: { y: { beginAtZero: true, max: 100, ticks: { font: { size: 8 } } }, x: { ticks: { font: { size: 7 } } } } },
+                plugins: [ChartDataLabels]
+            });
+            reportCharts.push(reportYearChart);
+            
+            const months = [], mScores = [], mBg = [], mTooltips = [];
+            const mTcScores = [], mTmScores = [], mDcScores = [];
+            for (let m = 1; m <= 12; m++) {
+                const mc = getCanChiThangAmLich(m, lunarYear), s = calculateMonthScore(ageData, mc);
+                                months.push(m.toString()); mScores.push(s); mTooltips.push(mc.name);
+                mBg.push(`hsla(${Math.floor((s/100)*120)},70%,50%,0.7)`);
+                mTcScores.push(calculateThienCanScore100(ageData, mc));
+                mTmScores.push(calculateThanMangScore100(ageData, mc));
+                mDcScores.push(calculateDiaChiScore100(ageData, mc));
+            }
+            
+            const monthDatasets = [];
+            if (showMonthTD) monthDatasets.push({ data: mScores, fill: true, backgroundColor: 'rgba(52,152,219,0.2)', borderColor: 'rgba(52,152,219,1)', borderWidth: 2, tension: 0.4, pointBackgroundColor: mBg, pointRadius: 5 });
+            if (showMonthTC) monthDatasets.push({ label: 'TC', data: mTcScores, fill: false, borderColor: '#9b59b6', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#9b59b6' });
+            if (showMonthTM) monthDatasets.push({ label: 'TM', data: mTmScores, fill: false, borderColor: '#f39c12', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#f39c12' });
+            if (showMonthDC) monthDatasets.push({ label: 'ĐC', data: mDcScores, fill: false, borderColor: '#1abc9c', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,4], tension: 0.3, pointRadius: 2, pointBackgroundColor: '#1abc9c' });
+            
+            const reportMonthChart = new Chart(document.getElementById('reportMonthChart').getContext('2d'), {
+                type: 'line', data: { labels: months, datasets: monthDatasets },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: (v, ctx) => ctx.datasetIndex === 0 && showMonthTD ? v.toFixed(0) : '', font: { weight: 'bold', size: 8 }, color: '#2c3e50' } }, scales: { y: { beginAtZero: true, max: 100, ticks: { font: { size: 8 } } }, x: { ticks: { font: { size: 8 } } } } },
+                plugins: [ChartDataLabels]
+            });
+            reportCharts.push(reportMonthChart);
+            
+            for (let lunarMonth = 1; lunarMonth <= 12; lunarMonth++) {
+                const canvasId = `reportDayChart${lunarMonth}`;
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) continue;
+                const dim = getLunarMonthDays(lunarMonth, lunarYear, 7);
+                const days = [], dScores = [], dBg = [], dTooltips = [];
+                for (let d = 1; d <= dim; d++) {
+                    const sd = convertLunar2Solar(d, lunarMonth, lunarYear, 0, 7); if (sd[0] === 0) continue;
+                    const dc = getCanChiNgay(sd[0], sd[1], sd[2]), s = calculateDayScore(ageData, dc);
+                    days.push(d.toString()); dScores.push(s);
+                    dTooltips.push({ cc: dc.name, sl: `${sd[0]}/${sd[1]}/${sd[2]}` });
+                    dBg.push(`hsla(${Math.floor((s/100)*120)},70%,50%,0.7)`);
+                }
+                const reportDayChart = new Chart(canvas.getContext('2d'), {
+                    type: 'line', 
+                    data: { labels: days, datasets: [{ data: dScores, fill: true, backgroundColor: 'rgba(52,152,219,0.15)', borderColor: 'rgba(52,152,219,1)', borderWidth: 2, tension: 0.3, pointBackgroundColor: dBg, pointRadius: 3, pointHoverRadius: 5 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { title: ctx => `Ngày ${ctx[0].dataIndex + 1} - ${dTooltips[ctx[0].dataIndex].cc}`, afterTitle: ctx => `(DL: ${dTooltips[ctx[0].dataIndex].sl})` } }, datalabels: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { font: { size: 8 } } }, x: { ticks: { font: { size: 7 } } } } },
+                    plugins: [ChartDataLabels]
+                });
+                reportCharts.push(reportDayChart);
+            }
+        }
+
+        function closePrintReport() { document.getElementById('printReportModal').style.display = 'none'; }
+        function printReport() { window.print(); }
+
+        // ==================== TAB 3: COMPARE FUNCTIONS ====================
+        let cpYearChart = null, cpMonthChart = null, cpDayChart = null;
+        let currentCompareData = null;
+
+        function generateCompare() {
+            const viewYear = parseInt(document.getElementById('cpYearSelect').value);
+            const tuoiAName = document.getElementById('cpTuoiASelect').value;
+            const tuoiBName = document.getElementById('cpTuoiBSelect').value;
+            const ageDataA = getHoaGiapByName(tuoiAName);
+            const ageDataB = getHoaGiapByName(tuoiBName);
+            if (!ageDataA || !ageDataB) return alert("Không tìm thấy thông tin tuổi!");
+            if (tuoiAName === tuoiBName) return alert("Vui lòng chọn 2 tuổi khác nhau để so sánh!");
+            const birthYearA = getBirthYear(ageDataA.index);
+            const birthYearB = getBirthYear(ageDataB.index);
+            const viewYearData = getHoaGiapByYear(viewYear);
+            const lunarInfoMid = convertSolar2Lunar(15, 6, viewYear, 7);
+            const lunarYear = lunarInfoMid[2];
+            currentCompareData = { ageDataA, ageDataB, viewYear, viewYearData, birthYearA, birthYearB, lunarYear };
+            
+            document.getElementById('compareTitle').innerHTML = `SO SÁNH ĐỊNH LƯỢNG TƯƠNG TÁC TRONG NĂM <strong>${viewYearData.name}</strong> (${viewYear})`;
+            document.getElementById('compareTitle').style.display = 'block';
+            document.getElementById('cpCardA').innerHTML = `<h4>🔵 TUỔI A</h4><div class="value">${ageDataA.name}</div><div class="sub-info">Năm sinh: ${birthYearA}<br>${ageDataA.menh}</div>`;
+            document.getElementById('cpCardNam').innerHTML = `<h4>📅 NĂM XEM</h4><div class="value">${viewYearData.name}</div><div class="sub-info">Năm: ${viewYear}<br>${viewYearData.menh}</div>`;
+            document.getElementById('cpCardB').innerHTML = `<h4>🟠 TUỔI B</h4><div class="value">${ageDataB.name}</div><div class="sub-info">Năm sinh: ${birthYearB}<br>${ageDataB.menh}</div>`;
+            document.getElementById('compareSummary').style.display = 'flex';
+            
+            document.getElementById('cpLegendA').innerHTML = `🔵 ${birthYearA}`;
+            document.getElementById('cpLegendB').innerHTML = `🟠 ${birthYearB}`;
+            document.getElementById('cpLegendAMonth').innerHTML = `🔵 ${birthYearA}`;
+            document.getElementById('cpLegendBMonth').innerHTML = `🟠 ${birthYearB}`;
+            document.getElementById('cpLegendADay').innerHTML = `🔵 ${birthYearA}`;
+            document.getElementById('cpLegendBDay').innerHTML = `🟠 ${birthYearB}`;
+            
+            generateCompareYearChart(ageDataA, ageDataB, viewYear, birthYearA, birthYearB);
+            generateCompareMonthChart(ageDataA, ageDataB, lunarYear, birthYearA, birthYearB);
+            setupCompareDayMonthSelector(lunarYear);
+            updateCompareDayChart();
+            ['cpYearChartSection', 'cpMonthChartSection', 'cpDayChartSection'].forEach(id => document.getElementById(id).style.display = 'block');
+        }
+
+        function getSpecialPointColor(specials) {
+            if (specials.includes('tamtai')) return '#e74c3c';
+            if (specials.includes('thaituese')) return '#1e8449';
+            if (specials.includes('xungthaituese')) return '#9b59b6';
+            return null;
+        }
+
+        function generateCompareYearChart(ageDataA, ageDataB, centerYear, birthYearA, birthYearB) {
+            const labels = [], scoresA = [], scoresB = [];
+            const pointColorsA = [], pointColorsB = [];
+            const pointRadiiA = [], pointRadiiB = [];
+            const specialsA = [], specialsB = [];
+            for (let i = -3; i <= 3; i++) {
+                const y = centerYear + i;
+                const yd = getHoaGiapByYear(y);
+                labels.push(`${y}\n${yd.name}`);
+                const rA = calculateYearScore(ageDataA, yd);
+                const rB = calculateYearScore(ageDataB, yd);
+                scoresA.push(rA.score);
+                scoresB.push(rB.score);
+                specialsA.push(rA.specials);
+                specialsB.push(rB.specials);
+                const colorA = getSpecialPointColor(rA.specials);
+                const colorB = getSpecialPointColor(rB.specials);
+                pointColorsA.push(colorA || '#3498db');
+                pointColorsB.push(colorB || '#e67e22');
+                pointRadiiA.push(colorA ? 12 : (i === 0 ? 10 : 6));
+                pointRadiiB.push(colorB ? 12 : (i === 0 ? 10 : 6));
+            }
+            if (cpYearChart) cpYearChart.destroy();
+            cpYearChart = new Chart(document.getElementById('cpYearChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: birthYearA.toString(), data: scoresA, borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.1)', borderWidth: 3, tension: 0.3, fill: false, pointBackgroundColor: pointColorsA, pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: pointRadiiA, pointHoverRadius: 14 },
+                        { label: birthYearB.toString(), data: scoresB, borderColor: '#e67e22', backgroundColor: 'rgba(230,126,34,0.1)', borderWidth: 3, tension: 0.3, fill: false, pointBackgroundColor: pointColorsB, pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: pointRadiiB, pointHoverRadius: 14 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { const year = ctx.datasetIndex === 0 ? birthYearA : birthYearB; return `${year}: ${ctx.parsed.y.toFixed(1)} điểm`; },
+                                afterLabel: function(ctx) { const specials = ctx.datasetIndex === 0 ? specialsA[ctx.dataIndex] : specialsB[ctx.dataIndex]; let notes = []; if (specials.includes('tamtai')) notes.push('⚠️ Tam Tai'); if (specials.includes('thaituese')) notes.push('⚠️ Thái Tuế'); if (specials.includes('xungthaituese')) notes.push('⚠️ Xung Thái Tuế'); return notes.join('\n'); }
+                            }
+                        },
+                        datalabels: { display: true, anchor: 'end', align: function(ctx) { return ctx.datasetIndex === 0 ? 'top' : 'bottom'; }, offset: 4, formatter: v => v.toFixed(1), font: { weight: 'bold', size: 10 }, color: function(ctx) { return ctx.datasetIndex === 0 ? '#2980b9' : '#d35400'; } }
+                    },
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function generateCompareMonthChart(ageDataA, ageDataB, lunarYear, birthYearA, birthYearB) {
+            const labels = [], scoresA = [], scoresB = [], tooltips = [];
+            for (let m = 1; m <= 12; m++) {
+                const mc = getCanChiThangAmLich(m, lunarYear);
+                labels.push(m.toString());
+                tooltips.push(mc.name);
+                scoresA.push(calculateMonthScore(ageDataA, mc));
+                scoresB.push(calculateMonthScore(ageDataB, mc));
+            }
+            if (cpMonthChart) cpMonthChart.destroy();
+            cpMonthChart = new Chart(document.getElementById('cpMonthChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: birthYearA.toString(), data: scoresA, borderColor: '#3498db', backgroundColor: 'transparent', borderWidth: 3, tension: 0.4, fill: false, pointBackgroundColor: '#3498db', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 10 },
+                        { label: birthYearB.toString(), data: scoresB, borderColor: '#e67e22', backgroundColor: 'transparent', borderWidth: 3, tension: 0.4, fill: false, pointBackgroundColor: '#e67e22', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 10 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: ctx => `Tháng ${ctx[0].dataIndex + 1} - ${tooltips[ctx[0].dataIndex]}`, label: function(ctx) { const year = ctx.datasetIndex === 0 ? birthYearA : birthYearB; return `${year}: ${ctx.parsed.y.toFixed(1)} điểm`; } } },
+                        datalabels: { display: true, anchor: 'end', align: function(ctx) { return ctx.datasetIndex === 0 ? 'top' : 'bottom'; }, offset: 4, formatter: v => v.toFixed(1), font: { weight: 'bold', size: 9 }, color: function(ctx) { return ctx.datasetIndex === 0 ? '#2980b9' : '#d35400'; } }
+                    },
+                    scales: { y: { beginAtZero: true, max: 100 }, x: { title: { display: true, text: 'Tháng Âm Lịch' } } }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function setupCompareDayMonthSelector(lunarYear) {
+            const sel = document.getElementById('cpDayMonthSelect');
+            sel.innerHTML = '';
+            for (let m = 1; m <= 12; m++) { sel.innerHTML += `<option value="${m}">Tháng ${m} âm lịch</option>`; }
+            sel.value = convertSolar2Lunar(new Date().getDate(), new Date().getMonth() + 1, new Date().getFullYear(), 7)[1];
+        }
+
+        function updateCompareDayChart() {
+            if (!currentCompareData) return;
+            const { ageDataA, ageDataB, lunarYear, birthYearA, birthYearB } = currentCompareData;
+            const lm = parseInt(document.getElementById('cpDayMonthSelect').value);
+            const dim = getLunarMonthDays(lm, lunarYear, 7);
+            const labels = [], scoresA = [], scoresB = [], tooltips = [];
+            for (let d = 1; d <= dim; d++) {
+                const sd = convertLunar2Solar(d, lm, lunarYear, 0, 7);
+                if (sd[0] === 0) continue;
+                const dc = getCanChiNgay(sd[0], sd[1], sd[2]);
+                labels.push(d.toString());
+                tooltips.push({ cc: dc.name, sl: `${sd[0]}/${sd[1]}/${sd[2]}` });
+                scoresA.push(calculateDayScore(ageDataA, dc));
+                scoresB.push(calculateDayScore(ageDataB, dc));
+            }
+            if (cpDayChart) cpDayChart.destroy();
+            cpDayChart = new Chart(document.getElementById('cpDayChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: birthYearA.toString(), data: scoresA, borderColor: '#3498db', backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#3498db', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 4, pointHoverRadius: 8 },
+                        { label: birthYearB.toString(), data: scoresB, borderColor: '#e67e22', backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#e67e22', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 4, pointHoverRadius: 8 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: ctx => `Ngày ${ctx[0].dataIndex + 1} - ${tooltips[ctx[0].dataIndex].cc}`, afterTitle: ctx => `(DL: ${tooltips[ctx[0].dataIndex].sl})`, label: function(ctx) { const year = ctx.datasetIndex === 0 ? birthYearA : birthYearB; return `${year}: ${ctx.parsed.y.toFixed(1)} điểm`; } } },
+                        datalabels: { display: false }
+                    },
+                    scales: { y: { beginAtZero: true, max: 100 }, x: { title: { display: true, text: 'Ngày Âm Lịch' }, ticks: { font: { size: 9 } } } }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        // ==================== TAB & INIT ====================
+        function openTab(evt, tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName).style.display = 'block';
+            evt.currentTarget.classList.add('active');
+        }
+
+        function init() {
+            const cy = new Date().getFullYear();
+            
+            // Tab 1
+            const ys = document.getElementById('yearSelect');
+            hoaGiap.forEach(i => { ys.innerHTML += `<option value="${i.name}">${i.name}</option>`; });
+            ys.value = "Ất Tỵ";
+            
+            // Tab 2
+            const dys = document.getElementById('dlYearSelect');
+            for (let y = cy - 10; y <= cy + 10; y++) { const yd = getHoaGiapByYear(y); dys.innerHTML += `<option value="${y}">${y} (${yd.name})</option>`; }
+            dys.value = cy;
+            
+            const dts = document.getElementById('dlTuoiSelect');
+            hoaGiap.forEach(i => { dts.innerHTML += `<option value="${i.name}">${i.name} (${getBirthYear(i.index)}) - ${i.menh}</option>`; });
+            
+            // Tab 3 - Compare
+            const cpys = document.getElementById('cpYearSelect');
+            for (let y = cy - 10; y <= cy + 10; y++) { const yd = getHoaGiapByYear(y); cpys.innerHTML += `<option value="${y}">${y} (${yd.name})</option>`; }
+            cpys.value = cy;
+            
+            const cpTuoiA = document.getElementById('cpTuoiASelect');
+            const cpTuoiB = document.getElementById('cpTuoiBSelect');
+            hoaGiap.forEach(i => { 
+                cpTuoiA.innerHTML += `<option value="${i.name}">${i.name} (${getBirthYear(i.index)}) - ${i.menh}</option>`; 
+                cpTuoiB.innerHTML += `<option value="${i.name}">${i.name} (${getBirthYear(i.index)}) - ${i.menh}</option>`; 
+            });
+            cpTuoiA.value = hoaGiap[0].name;
+            cpTuoiB.value = hoaGiap[1].name;
+            
+            // Event listeners Tab 1
+            document.getElementById('viewGoodButton').addEventListener('click', displayGoodList);
+            document.getElementById('viewBadButton').addEventListener('click', displayBadList);
+            document.getElementById('viewAllButton').addEventListener('click', displayAllList);
+            document.getElementById('exportGoodButton').addEventListener('click', handleGoodExport);
+            document.getElementById('exportBadButton').addEventListener('click', handleBadExport);
+            ys.addEventListener('change', () => { fullResults = []; displayGoodList(); });
+
+            const modal = document.getElementById('exportModal');
+            document.querySelector('.close-button').onclick = () => modal.style.display = "none";
+            window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
+            
+            document.querySelector('.tab-link').click();
+            displayGoodList();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
